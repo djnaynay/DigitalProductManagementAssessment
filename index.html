@@ -1060,13 +1060,8 @@
                             </div>
                         </div>
                         
-                        <div class="cta-box">
-                            <h3>Ready to level up?</h3>
-                            <p>Our Product Management Mastery course is designed for PMs like you. Learn frameworks to leverage your strengths, overcome your blind spots, and ship products users love.</p>
-                            <div class="cta-buttons">
-                                <a href="#" class="cta-btn primary">Explore the Course →</a>
-                                <button class="cta-btn secondary" onclick="resetQuiz()">Retake Assessment</button>
-                            </div>
+                        <div style="text-align: center; margin-top: 40px;">
+                            <button class="cta-btn secondary" onclick="resetQuiz()">Retake Assessment</button>
                         </div>
                     </div>
                 </div>
@@ -1236,7 +1231,53 @@
             document.getElementById('intro-screen').classList.remove('hidden');
             document.getElementById('quiz-container').classList.add('hidden');
         }
-        
+
+        // ─── GOOGLE SHEETS DATA COLLECTION ───
+        const SHEET_URL = 'https://script.google.com/macros/s/AKfycbx-xZU-GOWuvNZ08nJqRmzBndx6IyVzTtnmRbqs4AB7ZcfP026tfy_6J3sBX36tTYDGXg/exec';
+
+        function sendToSheet(scores, topPersonas) {
+            const payload = {
+                top1: topPersonas[0] ? topPersonas[0].name + ' (' + topPersonas[0].score + ' pts)' : '',
+                top2: topPersonas[1] ? topPersonas[1].name + ' (' + topPersonas[1].score + ' pts)' : '',
+                explorer:           scores['The Explorer']           || 0,
+                storyteller:        scores['The Storyteller']        || 0,
+                designer:           scores['The Designer']           || 0,
+                solution_provider:  scores['The Solution Provider']  || 0,
+                orchestrator:       scores['The Orchestrator']       || 0,
+                tech_adopter:       scores['The Tech Adopter']       || 0,
+                commercial_catalyst:scores['The Commercial Catalyst']|| 0,
+                product_leader:     scores['The Product Leader']     || 0,
+                growth_driver:      scores['The Growth Driver']      || 0
+            };
+
+            fetch(SHEET_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).catch(err => console.log('Sheet error:', err));
+        }
+
+        // Patch renderResult to also send data
+        const _origRenderResult = renderResult;
+        renderResult = function() {
+            const scores = calculateScores();
+            const topPersonas = getTopPersonas(scores);
+            sendToSheet(scores, topPersonas);
+            return _origRenderResult();
+        };
+
+        // ─── IFRAME AUTO-RESIZE ───
+        // Sends current document height to parent whenever content changes
+        function sendHeight() {
+            window.parent.postMessage({ iframeHeight: document.documentElement.scrollHeight }, '*');
+        }
+
+        window.addEventListener('load', sendHeight);
+        window.addEventListener('resize', sendHeight);
+        const _resizeObserver = new MutationObserver(sendHeight);
+        _resizeObserver.observe(document.body, { subtree: true, childList: true, attributes: true });
+
         // Initialize on load
         init();
     </script>
